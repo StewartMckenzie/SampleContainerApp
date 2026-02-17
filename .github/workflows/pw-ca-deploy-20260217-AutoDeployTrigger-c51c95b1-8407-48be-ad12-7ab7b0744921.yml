@@ -1,0 +1,49 @@
+name: Trigger auto deployment for pw-ca-deploy-20260217
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/pw-ca-deploy-20260217-AutoDeployTrigger-c51c95b1-8407-48be-ad12-7ab7b0744921.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.PWCADEPLOY20260217_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.PWCADEPLOY20260217_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.PWCADEPLOY20260217_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          _targetLabelKey_: _targetLabel_
+          registryUrl: acaregistry.azurecr.io
+          registryUsername: ${{ secrets.PWCADEPLOY20260217_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.PWCADEPLOY20260217_REGISTRY_PASSWORD }}
+          containerAppName: pw-ca-deploy-20260217
+          resourceGroup: pw-ca-deploy-rg-20260217
+          imageToBuild: acaregistry.azurecr.io/pw-ca-deploy-20260217:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
